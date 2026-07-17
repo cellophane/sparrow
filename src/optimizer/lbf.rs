@@ -4,7 +4,7 @@ use crate::sample::search::{search_placement, SampleConfig};
 use crate::util::assertions;
 use itertools::Itertools;
 use jagua_rs::entities::Instance;
-use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem};
+use jagua_rs::probs::bpp::entities::{BPInstance, BPLayoutType, BPPlacement, BPProblem, LayKey};
 use jagua_rs::Instant;
 use log::debug;
 use ordered_float::OrderedFloat;
@@ -13,19 +13,19 @@ use std::iter;
 use rand::rngs::Xoshiro256PlusPlus;
 
 pub struct LBFBuilder {
-    pub instance: SPInstance,
-    pub prob: SPProblem,
+    pub instance: BPInstance,
+    pub prob: BPProblem,
     pub rng: Xoshiro256PlusPlus,
     pub sample_config: SampleConfig,
 }
 
 impl LBFBuilder {
     pub fn new(
-        instance: SPInstance,
+        instance: BPInstance,
         rng: Xoshiro256PlusPlus,
         sample_config: SampleConfig,
     ) -> Self {
-        let prob = SPProblem::new(instance.clone());
+        let prob = BPProblem::new(instance.clone());
 
         Self {
             instance,
@@ -77,8 +77,8 @@ impl LBFBuilder {
         }
     }
 
-    fn find_placement(&mut self, item_id: usize) -> Option<SPPlacement> {
-        let layout = &self.prob.layout;
+    fn find_placement(&mut self, item_id: usize, layout_key: LayKey) -> Option<BPPlacement> {
+        let layout = &self.prob.layouts.values()[item_id];
         let item = self.instance.item(item_id);
         let evaluator = LBFEvaluator::new(layout, item);
 
@@ -86,7 +86,7 @@ impl LBFBuilder {
 
         match best_sample {
             Some((d_transf, SampleEval::Clear { .. })) => {
-                Some(SPPlacement { item_id, d_transf })
+                Some(BPPlacement { item_id, d_transf })
             }
             _ => None
         }
