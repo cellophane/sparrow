@@ -58,7 +58,9 @@ fn main() -> Result<()>{
     if let Some(arg_rng_seed) = args.rng_seed {
         config.rng_seed = Some(arg_rng_seed as usize);
     }
-
+	let target_width = args.target_width.unwrap_or(0.0);
+	config.cmpr_cfg.target_width = target_width;
+	config.expl_cfg.target_width = target_width;
     info!("[MAIN] configured to explore for {}s and compress for {}s", explore_dur.as_secs(), compress_dur.as_secs());
 
     let rng = match config.rng_seed {
@@ -75,23 +77,22 @@ fn main() -> Result<()>{
 
     info!("[MAIN] system time: {}", jiff::Timestamp::now());
 
-    let (ext_instance, ext_solution) = io::read_spp_input(Path::new(&input_file_path))?;
-
+    let (ext_bp_instance, ext_bp_solution) = io::read_bpp_input(Path::new(&input_file_path))?;
     let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
-    let instance = jagua_rs::probs::spp::io::import_instance(&importer, &ext_instance)?;
+    let bp_instance = jagua_rs::probs::bpp::io::import_instance(&importer, &ext_bp_instance)?;
 
-    let initial_solution = ext_solution.map(|e|
-        jagua_rs::probs::spp::io::import_solution(&instance, &e)
-    );
+    let initial_solution = jagua_rs::probs::bpp::io::
+    import_solution(&bp_instance, &ext_bp_instance);
+    
 
-    info!("[MAIN] loaded instance {} with #{} items", ext_instance.name, instance.total_item_qty());
+    info!("[MAIN] loaded instance {} with #{} items and #{} bins", ext_bp_instance.name, bp_instance.total_item_qty(), bp_instance.bin_qty());
     
     let mut svg_exporter = {
-        let final_svg_path = Some(format!("{OUTPUT_DIR}/final_{}.svg", ext_instance.name));
+        let final_svg_path = Some(format!("{OUTPUT_DIR}/final_{}.svg", ext_bp_instance.name));
 
         let intermediate_svg_dir = match cfg!(feature = "only_final_svg") {
             true => None,
-            false => Some(format!("{OUTPUT_DIR}/sols_{}", ext_instance.name))
+            false => Some(format!("{OUTPUT_DIR}/sols_{}", ext_bp_instance.name))
         };
 
         let live_svg_path = match cfg!(feature = "live_svg") {
@@ -109,7 +110,7 @@ fn main() -> Result<()>{
     let mut ctrlc_terminator = CtrlCTerminator::new();
 
     let solution = optimize(
-        instance.clone(),
+        bp_instance.clone(),
         rng,
         &mut svg_exporter,
         &mut ctrlc_terminator,
@@ -118,10 +119,10 @@ fn main() -> Result<()>{
         initial_solution.as_ref()
     );
 
-    let json_path = format!("{OUTPUT_DIR}/final_{}.json", ext_instance.name);
+    let json_path = format!("{OUTPUT_DIR}/final_{}.json", ext_bp_instance.name);
     let json_output = ExtSPOutput {
         instance: ext_instance,
-        solution: jagua_rs::probs::spp::io::export(&instance, &solution, *EPOCH)
+        solution: jagua_rs::probs::bpp::io::export(&bp_instance, &solution, *EPOCH)
     };
     io::write_json(&json_output, Path::new(json_path.as_str()), Level::Info)?;
 

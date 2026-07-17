@@ -6,7 +6,7 @@ use crate::optimizer::lbf::LBFBuilder;
 use crate::optimizer::separator::Separator;
 use crate::util::listener::{ReportType, SolutionListener};
 use crate::util::terminator::Terminator;
-use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
+use jagua_rs::probs::bpp::entities::{BPInstance, BPSolution};
 use log::info;
 use rand::{Rng, SeedableRng};
 use std::time::Duration;
@@ -20,14 +20,14 @@ pub mod compress;
 
 ///Algorithm 11 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn optimize(
-    instance: SPInstance,
+    instance: BPInstance,
     mut rng: Xoshiro256PlusPlus,
     sol_listener: &mut impl SolutionListener,
     terminator: &mut impl Terminator,
     expl_config: &ExplorationConfig,
     cmpr_config: &CompressionConfig,
-    initial_solution: Option<&SPSolution>
-) -> SPSolution {
+    initial_solution: Option<&BPSolution>
+) -> BPSolution {
     let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
     
     // First build an initial solution if none is provided

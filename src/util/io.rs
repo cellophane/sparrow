@@ -2,6 +2,7 @@ use crate::EPOCH;
 use anyhow::{Context, Result};
 use clap::Parser;
 use jagua_rs::probs::spp::io::ext_repr::{ExtSPInstance, ExtSPSolution};
+use jagua_rs::probs::bpp::io::ext_repr::{ExtBPInstance, ExtBPSolution};
 use log::{log, Level, LevelFilter};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -34,6 +35,10 @@ pub struct MainCli {
 
     #[arg(short = 's', long, help = "Fixed seed for the random number generator")]
     pub rng_seed: Option<u64>,
+	
+	///Target width
+	#[arg(short = 'w', long, help = "Set target width")]
+    pub target_width: Option<f32>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -41,6 +46,13 @@ pub struct ExtSPOutput {
     #[serde(flatten)]
     pub instance: ExtSPInstance,
     pub solution: ExtSPSolution,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ExtBPOutput {
+    #[serde(flatten)]
+    pub instance: ExtBPInstance,
+    pub solution: ExtBPSolution,
 }
 
 pub fn init_logger(level_filter: LevelFilter, log_file_path: &Path) -> Result<()> {
@@ -121,6 +133,22 @@ pub fn read_spp_input(path: &Path) -> Result<(ExtSPInstance, Option<ExtSPSolutio
         Err(_) => {
             //try parsing just the instance
             let ext_instance = serde_json::from_str::<ExtSPInstance>(&input_str)
+                .context("could not parse instance from input file")?;
+            Ok((ext_instance, None))
+        }
+    }
+}
+
+pub fn read_bpp_input(path: &Path) -> Result<(ExtBPInstance, Option<ExtBPSolution>)> {
+    let input_str = fs::read_to_string(path).context("could not read input file")?;
+    //try parsing a full output (instance + solution)
+    match serde_json::from_str::<ExtBPOutput>(&input_str) {
+        Ok(ext_output) => {
+            Ok((ext_output.instance, Some(ext_output.solution)))
+        }
+        Err(_) => {
+            //try parsing just the instance
+            let ext_instance = serde_json::from_str::<ExtBPInstance>(&input_str)
                 .context("could not parse instance from input file")?;
             Ok((ext_instance, None))
         }

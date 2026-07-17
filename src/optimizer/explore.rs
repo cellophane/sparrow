@@ -41,6 +41,10 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
                 best_width = current_width;
                 feasible_sols.push(local_best.0.clone());
                 sol_listener.report(ReportType::ExplFeas, &local_best.0, instance);
+				if best_width < config.target_width{
+					info!("[EXPL] better than target width!");
+					break;
+				}
             }
             // Shrink the strip width and clear the infeasible solution pool
             let next_width = current_width * (1.0 - config.shrink_step);
