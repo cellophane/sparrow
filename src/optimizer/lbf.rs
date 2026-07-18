@@ -24,6 +24,7 @@ impl LBFBuilder {
         instance: SPInstance,
         rng: Xoshiro256PlusPlus,
         sample_config: SampleConfig,
+        
     ) -> Self {
         let prob = SPProblem::new(instance.clone());
 
@@ -32,10 +33,11 @@ impl LBFBuilder {
             prob,
             rng,
             sample_config,
+            
         }
     }
 
-    pub fn construct(mut self) -> Self {
+    pub fn construct(mut self,start_index:usize,end_index:usize) -> Self {
         let start = Instant::now();
         let n_items = self.instance.items.len();
         let sorted_item_indices = (0..n_items)
@@ -54,7 +56,10 @@ impl LBFBuilder {
         debug!("[CONSTR] placing items in order: {:?}",sorted_item_indices);
 
         for item_id in sorted_item_indices {
-            self.place_item(item_id);
+            if item_id>=start_index && item_id < end_index {
+                self.place_item(item_id);
+            }
+            
         }
 
         self.prob.fit_strip();

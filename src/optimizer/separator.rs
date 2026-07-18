@@ -72,7 +72,7 @@ impl Separator {
     pub fn separate(&mut self, term: &impl Terminator, sol_listener: &mut impl SolutionListener) -> (SPSolution, CTSnapshot) {
         let mut min_loss_sol = (self.prob.save(), self.ct.save());
         let mut min_loss = self.ct.get_total_loss();
-        log!(self.config.log_level,"[SEP] separating at width: {:.3} and loss: {} ", self.prob.strip_width(), FMT().fmt2(min_loss));
+        //log!(self.config.log_level,"[SEP] separating at width: {:.3} and loss: {} ", self.prob.strip_width(), FMT().fmt2(min_loss));
 
         let mut n_strikes = 0;
         let mut n_iter = 0;
@@ -96,12 +96,12 @@ impl Separator {
 
                 if loss == 0.0 {
                     //All collisions are resolved
-                    log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (S)  min_l: {}",FMT().fmt2(loss));
+                    //log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (S)  min_l: {}",FMT().fmt2(loss));
                     min_loss_sol = (self.prob.save(), self.ct.save());
                     break 'outer;
                 } else if loss < min_loss {
                     //Not all collisions are resolved, but we found a new 'best' solution
-                    log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (*) min_l: {}",FMT().fmt2(loss));
+                    //log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (*) min_l: {}",FMT().fmt2(loss));
                     sol_listener.report(ReportType::ExplImproving, &self.prob.save(), &self.instance);
                     if loss < min_loss * 0.98 {
                         //Reset the `iter_no_improvement` counter if the best solution is a substantial improvement
@@ -129,14 +129,7 @@ impl Separator {
             self.rollback(&min_loss_sol.0, Some(&min_loss_sol.1));
         }
         let secs = start.elapsed().as_secs_f32();
-        log!(self.config.log_level, "[SEP] finished, evals/s: {} K, evals/move: {}, moves/s: {}, iter/s: {}, #workers: {}, total {:.3}s",
-            (sep_stats.total_evals as f32/ (1000.0 * secs)) as usize,
-            FMT().fmt2(sep_stats.total_evals as f32 / sep_stats.total_moves as f32),
-            FMT().fmt2(sep_stats.total_moves as f32 / secs),
-            FMT().fmt2(n_iter as f32 / secs),
-            self.workers.len(),
-            FMT().fmt2(secs),
-        );
+
 
         // Return the best solution found: a feasible one if separation was successful, otherwise the 'least' infeasible one
         (min_loss_sol.0, min_loss_sol.1)

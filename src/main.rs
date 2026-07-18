@@ -12,12 +12,16 @@ use sparrow::EPOCH;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
-
+use slotmap::SlotMap;
 use anyhow::{bail, Result};
+use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolution};
+use jagua_rs::entities::{LayoutSnapshot,Layout,PItemKey,PlacedItem};
 use rand::rngs::Xoshiro256PlusPlus;
 use sparrow::consts::{DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DEFAULT_FAIL_DECAY_RATIO_CMPR, DEFAULT_MAX_CONSEQ_FAILS_EXPL, LOG_LEVEL_FILTER_DEBUG, LOG_LEVEL_FILTER_RELEASE};
 use sparrow::util::ctrlc_terminator::CtrlCTerminator;
 use sparrow::util::svg_exporter::SvgExporter;
+use sparrow::util::terminator::Terminator;
+use sparrow::util::listener::{ReportType, SolutionListener};
 
 pub const OUTPUT_DIR: &str = "output";
 
@@ -50,6 +54,10 @@ fn main() -> Result<()>{
     };
     config.expl_cfg.time_limit = explore_dur;
     config.cmpr_cfg.time_limit = compress_dur;
+    let target_width:f32 = args.target_width.unwrap_or_else(|| 0.0);
+    config.expl_cfg.target_width = target_width;
+    config.cmpr_cfg.target_width = target_width;
+
     if args.early_termination {
         config.expl_cfg.max_conseq_failed_attempts = Some(DEFAULT_MAX_CONSEQ_FAILS_EXPL);
         config.cmpr_cfg.shrink_decay = ShrinkDecayStrategy::FailureBased(DEFAULT_FAIL_DECAY_RATIO_CMPR);
@@ -61,7 +69,7 @@ fn main() -> Result<()>{
 
     info!("[MAIN] configured to explore for {}s and compress for {}s", explore_dur.as_secs(), compress_dur.as_secs());
 
-    let rng = match config.rng_seed {
+    let mut rng = match config.rng_seed {
         Some(seed) => {
             info!("[MAIN] using seed: {}", seed);
             Xoshiro256PlusPlus::seed_from_u64(seed as u64)
@@ -80,14 +88,14 @@ fn main() -> Result<()>{
     let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
     let instance = jagua_rs::probs::spp::io::import_instance(&importer, &ext_instance)?;
 
-    let initial_solution = ext_solution.map(|e|
-        jagua_rs::probs::spp::io::import_solution(&instance, &e)
-    );
+    let initial_solution:Option<SPSolution> = None;
 
     info!("[MAIN] loaded instance {} with #{} items", ext_instance.name, instance.total_item_qty());
-    
+    let mut start_index:usize =0;
+    let mut total:usize =0;
+    let mut end_index:usize = 1;
     let mut svg_exporter = {
-        let final_svg_path = Some(format!("{OUTPUT_DIR}/final_{}.svg", ext_instance.name));
+        let final_svg_path = Some(format!("{OUTPUT_DIR}/final_{}_{1}_{2}.svg", ext_instance.name,start_index,end_index));
 
         let intermediate_svg_dir = match cfg!(feature = "only_final_svg") {
             true => None,
@@ -108,22 +116,62 @@ fn main() -> Result<()>{
     
     let mut ctrlc_terminator = CtrlCTerminator::new();
 
-    let solution = optimize(
-        instance.clone(),
-        rng,
-        &mut svg_exporter,
-        &mut ctrlc_terminator,
-        &config.expl_cfg,
-        &config.cmpr_cfg,
-        initial_solution.as_ref()
-    );
+    let name = ext_instance.name.clone();
+    let mut finished:bool = false;
 
-    let json_path = format!("{OUTPUT_DIR}/final_{}.json", ext_instance.name);
-    let json_output = ExtSPOutput {
-        instance: ext_instance,
-        solution: jagua_rs::probs::spp::io::export(&instance, &solution, *EPOCH)
-    };
-    io::write_json(&json_output, Path::new(json_path.as_str()), Level::Info)?;
+    let current_solution = initial_solution.clone();
+    let mut best_solution:SPSolution = SPProblem::new(instance.clone()).save();
 
+    while !finished && !ctrlc_terminator.kill() {
+        info!("[MAIN] while loop iteration {} {1} : {2}",start_index,end_index,instance.total_item_qty());
+        let current_ext_instance = ext_instance.clone();
+
+        let solution = optimize(
+            instance.clone(),
+            rng.clone(),
+            &mut svg_exporter,
+            &mut ctrlc_terminator,
+            &config.expl_cfg,
+            &config.cmpr_cfg,
+            current_solution.as_ref(),
+            start_index,
+            end_index
+        );
+
+
+        if solution.strip_width() <= target_width && end_index < instance.total_item_qty() {
+            end_index+=1;
+            end_index = std::cmp::min(instance.total_item_qty(), end_index);
+           }
+        else {
+            if end_index == instance.total_item_qty() && solution.strip_width() < target_width {
+                best_solution = solution.clone();
+                finished = true;
+                info!("[MAIN] finished successfully by end_index");
+            }
+            let indices: String = (start_index + 1).to_string() + "_" + &(end_index -1).to_string();
+            let json_path = format!("{OUTPUT_DIR}/final_{0}{1}.json", name, indices);
+            let json_output = ExtSPOutput {
+                instance: current_ext_instance,
+                solution: jagua_rs::probs::spp::io::export(&instance, &best_solution, *EPOCH)
+            };
+            io::write_json(&json_output, Path::new(json_path.as_str()), Level::Info)?;
+            svg_exporter.final_path = Some(format!("{OUTPUT_DIR}/final_{}_{1}_{2}.svg", ext_instance.name,start_index+1,end_index-1));
+            svg_exporter.report(ReportType::Final, &best_solution, &instance);
+            total += end_index-1 - start_index;
+            start_index = total;
+            end_index = std::cmp::min(instance.total_item_qty(), total+1);
+            info!("[MAIN] start_index is {} end_index is {1}", start_index,end_index);
+            if start_index == end_index {
+                info!("[MAIN] finished successfully by start_index == end_index");
+                finished = true;
+
+            }
+        }
+        ctrlc_terminator.timeout = None;
+        best_solution = solution.clone();
+
+    }
+    info!("[MAIN] made it out of while loop. total panels placed is {}", total);
     Ok(())
 }

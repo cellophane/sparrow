@@ -29,6 +29,10 @@ pub struct MainCli {
     pub compression: Option<u64>,
 
     /// Enable early and automatic termination
+    #[arg(short = 'w', long, requires = "Set target strip width.")]
+    pub target_width: Option<f32>,
+    
+    /// Enable early and automatic termination
     #[arg(short = 'x', long, help = "Enable early termination of the optimization process")]
     pub early_termination: bool,
 

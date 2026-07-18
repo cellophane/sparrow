@@ -29,6 +29,7 @@ pub struct SparrowConfig {
 #[derive(Debug, Clone, Copy)]
 pub struct ExplorationConfig {
     pub shrink_step: f32,
+    pub target_width: f32,
     pub time_limit: Duration,
     pub max_conseq_failed_attempts: Option<usize>,
     pub solution_pool_distribution_stddev: f32,
@@ -39,6 +40,7 @@ pub struct ExplorationConfig {
 #[derive(Debug, Clone, Copy)]
 pub struct CompressionConfig {
     pub shrink_range: (f32, f32),
+    pub target_width: f32,
     pub time_limit: Duration,
     pub shrink_decay: ShrinkDecayStrategy,
     pub separator_config: SeparatorConfig,
@@ -55,6 +57,7 @@ pub enum ShrinkDecayStrategy {
 pub const DEFAULT_SPARROW_CONFIG: SparrowConfig = SparrowConfig {
     rng_seed: None,
     expl_cfg: ExplorationConfig {
+        target_width: 0.0,
         shrink_step: 0.001,
         time_limit: Duration::from_secs(9 * 60),
         max_conseq_failed_attempts: None,
@@ -73,6 +76,7 @@ pub const DEFAULT_SPARROW_CONFIG: SparrowConfig = SparrowConfig {
         large_item_ch_area_cutoff_percentile: 0.75
     },
     cmpr_cfg: CompressionConfig {
+        target_width: 0.0,
         shrink_range: (0.0005, 0.00001),
         time_limit: Duration::from_secs(60),
         shrink_decay: ShrinkDecayStrategy::TimeBased,

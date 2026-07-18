@@ -26,20 +26,24 @@ pub fn optimize(
     terminator: &mut impl Terminator,
     expl_config: &ExplorationConfig,
     cmpr_config: &CompressionConfig,
-    initial_solution: Option<&SPSolution>
+    initial_solution: Option<&SPSolution>,
+    start_index: usize,
+    end_index: usize
 ) -> SPSolution {
+
     let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
     
     // First build an initial solution if none is provided
     let start_prob = match initial_solution {
         None => {
-            let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct();
+            let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct(start_index,end_index);
             builder.prob
         }
         Some(init_sol) => {
             info!("[OPT] warm starting from provided initial solution");
             let mut prob = jagua_rs::probs::spp::entities::SPProblem::new(instance.clone());
             prob.restore(init_sol);
+
             prob
         }
     };
@@ -55,6 +59,9 @@ pub fn optimize(
         expl_config,
     );
     let final_explore_sol = solutions.last().unwrap().clone();
+    if final_explore_sol.strip_width() < expl_config.target_width {
+        print!("[EXPL] Width better than target {}", final_explore_sol.strip_width());
+    }
 
     // Start the compression phase from the final solution from the exploration phase
     terminator.new_timeout(cmpr_config.time_limit);
@@ -68,7 +75,8 @@ pub fn optimize(
         cmpr_config,
     );
 
-    sol_listener.report(ReportType::Final, &cmpr_sol, &instance);
+
+    //sol_listener.report(ReportType::Final, &cmpr_sol, &instance);
 
     // Return the final compressed solution
     cmpr_sol

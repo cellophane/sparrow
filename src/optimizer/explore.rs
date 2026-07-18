@@ -20,12 +20,13 @@ use std::cmp::Reverse;
 /// Algorithm 12 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listener: &mut impl SolutionListener, term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {
     let mut current_width = sep.prob.strip_width();
+
     let mut best_width = current_width;
 
     let mut feasible_sols = vec![sep.prob.save()];
 
     sol_listener.report(ReportType::ExplFeas, &feasible_sols[0], instance);
-    info!("[EXPL] starting optimization with initial width: {:.3} ({:.3}%)",current_width,sep.prob.density() * 100.0);
+    //info!("[EXPL] starting optimization with initial width: {:.3} ({:.3}%)",current_width,sep.prob.density() * 100.0);
 
     let mut infeas_sol_pool: Vec<(SPSolution, f32)> = vec![];
 
@@ -36,8 +37,8 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
 
         if total_loss == 0.0 {
             // If successfully separated
-            if current_width < best_width {
-                info!("[EXPL] feasible solution found! (width: {:.3}, dens: {:.3}%)",current_width,sep.prob.density() * 100.0);
+            if current_width <= best_width {
+                //info!("[EXPL] feasible solution found! (width: {:.3}, dens: {:.3}%)",current_width,sep.prob.density() * 100.0);
                 best_width = current_width;
                 feasible_sols.push(local_best.0.clone());
                 sol_listener.report(ReportType::ExplFeas, &local_best.0, instance);
@@ -48,12 +49,12 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
             }
             // Shrink the strip width and clear the infeasible solution pool
             let next_width = current_width * (1.0 - config.shrink_step);
-            info!("[EXPL] shrinking strip by {}%: {:.3} -> {:.3}", config.shrink_step * 100.0, current_width, next_width);
+            //info!("[EXPL] shrinking strip by {}%: {:.3} -> {:.3}", config.shrink_step * 100.0, current_width, next_width);
             sep.change_strip_width(next_width, None);
             current_width = next_width;
             infeas_sol_pool.clear();
         } else {
-            info!("[EXPL] unable to reach feasibility (width: {:.3}, dens: {:.3}%, min loss: {:.3})", current_width, sep.prob.density() * 100.0, FMT().fmt2(total_loss));
+            //info!("[EXPL] unable to reach feasibility (width: {:.3}, dens: {:.3}%, min loss: {:.3})", current_width, sep.prob.density() * 100.0, FMT().fmt2(total_loss));
             sol_listener.report(ReportType::ExplInfeas, &local_best.0, instance);
 
             // Separation was not successful add it to the pool of infeasible solutions
@@ -62,7 +63,7 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
             }
 
             if infeas_sol_pool.len() >= config.max_conseq_failed_attempts.unwrap_or(usize::MAX) {
-                info!("[EXPL] max consecutive failed attempts ({}), terminating", infeas_sol_pool.len());
+                //info!("[EXPL] max consecutive failed attempts ({}), terminating", infeas_sol_pool.len());
                 break;
             }
 
@@ -75,7 +76,7 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
                 let selected_idx = (sample * infeas_sol_pool.len() as f32) as usize;
 
                 let (selected_sol, loss) = &infeas_sol_pool[selected_idx];
-                info!("[EXPL] starting solution {}/{} selected from solution pool (l: {}) to disrupt", selected_idx, infeas_sol_pool.len(), FMT().fmt2(*loss));
+                //info!("[EXPL] starting solution {}/{} selected from solution pool (l: {}) to disrupt", selected_idx, infeas_sol_pool.len(), FMT().fmt2(*loss));
                 selected_sol
             };
 
@@ -85,7 +86,7 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
         }
     }
 
-    info!("[EXPL] finished, best feasible solution: width: {:.3} ({:.3}%)",best_width,feasible_sols.last().unwrap().density(instance) * 100.0);
+    //info!("[EXPL] finished, best feasible solution: width: {:.3} ({:.3}%)",best_width,feasible_sols.last().unwrap().density(instance) * 100.0);
 
     feasible_sols
 }
