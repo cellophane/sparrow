@@ -44,10 +44,12 @@ pub fn optimize(
             let mut prob = jagua_rs::probs::spp::entities::SPProblem::new(instance.clone());
             prob.restore(init_sol);
 
-            prob
+            let mut builder:LBFBuilder = LBFBuilder::new_with_prob(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG, prob);
+            builder.place_item(end_index-1);
+            builder.prob
         }
     };
-
+    info!("[EXPL] enter exploration phase");
     // Begin by executing the exploration phase
     terminator.new_timeout(expl_config.time_limit);
     let mut expl_separator = Separator::new(instance.clone(), start_prob, next_rng(), expl_config.separator_config);
@@ -62,7 +64,7 @@ pub fn optimize(
     if final_explore_sol.strip_width() < expl_config.target_width {
         print!("[EXPL] Width better than target {}", final_explore_sol.strip_width());
     }
-
+    info!("[CMPR] enter compression phase");
     // Start the compression phase from the final solution from the exploration phase
     terminator.new_timeout(cmpr_config.time_limit);
     let mut cmpr_separator = Separator::new(expl_separator.instance, expl_separator.prob, next_rng(), cmpr_config.separator_config);

@@ -31,7 +31,7 @@ pub struct MainCli {
     /// Enable early and automatic termination
     #[arg(short = 'w', long, requires = "Set target strip width.")]
     pub target_width: Option<f32>,
-    
+
     /// Enable early and automatic termination
     #[arg(short = 'x', long, help = "Enable early termination of the optimization process")]
     pub early_termination: bool,
@@ -46,6 +46,14 @@ pub struct ExtSPOutput {
     pub instance: ExtSPInstance,
     pub solution: ExtSPSolution,
 }
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ExtSPProbOutput {
+    #[serde(flatten)]
+    pub solution: ExtSPSolution,
+}
+
+
 
 pub fn init_logger(level_filter: LevelFilter, log_file_path: &Path) -> Result<()> {
     //remove old log file

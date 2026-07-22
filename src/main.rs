@@ -7,7 +7,7 @@ use rand::SeedableRng;
 use sparrow::config::*;
 use sparrow::optimizer::optimize;
 use sparrow::util::io;
-use sparrow::util::io::{ExtSPOutput, MainCli};
+use sparrow::util::io::{ExtSPProbOutput, MainCli};
 use sparrow::EPOCH;
 use std::fs;
 use std::path::Path;
@@ -118,15 +118,15 @@ fn main() -> Result<()>{
     let name = ext_instance.name.clone();
     let mut finished:bool = false;
 
-    let current_solution = initial_solution.clone();
+    let mut current_solution = initial_solution.clone();
     let mut best_solution:SPSolution = SPProblem::new(instance.clone()).save();
-
+    let mut current_instance = instance.clone();
     while !finished && !ctrlc_terminator.kill() {
         info!("[MAIN] while loop iteration {} {1} : {2}",start_index,end_index,instance.total_item_qty());
         let current_ext_instance = ext_instance.clone();
 
         let solution = optimize(
-            instance.clone(),
+            current_instance.clone(),
             rng.clone(),
             &mut svg_exporter,
             &mut ctrlc_terminator,
@@ -141,6 +141,7 @@ fn main() -> Result<()>{
         if solution.strip_width() <= target_width && end_index < instance.total_item_qty() {
             end_index+=1;
             end_index = std::cmp::min(instance.total_item_qty(), end_index);
+            current_solution = Option::from(solution.clone());
            }
         else {
             if end_index == instance.total_item_qty() && solution.strip_width() < target_width {
@@ -149,9 +150,9 @@ fn main() -> Result<()>{
                 info!("[MAIN] finished successfully by end_index");
             }
             let indices: String = (start_index + 1).to_string() + "_" + &(end_index -1).to_string();
-            let json_path = format!("{OUTPUT_DIR}/final_{0}{1}.json", name, indices);
-            let json_output = ExtSPOutput {
-                instance: current_ext_instance,
+            let json_path = format!("{OUTPUT_DIR}/final_{0}_{1}.json", name, indices);
+            let json_output = ExtSPProbOutput {
+
                 solution: jagua_rs::probs::spp::io::export(&instance, &best_solution, *EPOCH)
             };
             io::write_json(&json_output, Path::new(json_path.as_str()), Level::Info)?;
@@ -166,6 +167,7 @@ fn main() -> Result<()>{
                 finished = true;
 
             }
+            current_solution = initial_solution.clone();
         }
         ctrlc_terminator.timeout = None;
         best_solution = solution.clone();

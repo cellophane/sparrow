@@ -42,19 +42,19 @@ pub fn compression_phase(
                 //info!("[CMPR] success at {:.3}% ({:.3} | {:.3}%)", step * 100.0, compacted_sol.strip_width(), compacted_sol.density(instance) * 100.0);
                 sol_listener.report(ReportType::CmprFeas, &compacted_sol, instance);
                 if compacted_sol.strip_width() < config.target_width{
-                    info!("[EXPL] better than target width!");
+                    info!("[COMP] better than target width!");
                     best_sol = compacted_sol;
                     break;
                 }
                 best_sol = compacted_sol;
-               
+
             }
             None => {
                 //info!("[CMPR] failed at {:.3}%", step * 100.0);
                 n_failed_attempts += 1;
             }
         }
-        
+
     }
     //info!("[CMPR] finished, compressed from {:.3}% to {:.3}% (+{:.3}%)", init_sol.density(instance) * 100.0, best_sol.density(instance) * 100.0, (best_sol.density(instance) - init_sol.density(instance)) * 100.0);
     best_sol

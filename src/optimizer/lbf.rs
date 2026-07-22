@@ -36,8 +36,22 @@ impl LBFBuilder {
             
         }
     }
+    pub fn new_with_prob(
+        instance: SPInstance,
+        rng: Xoshiro256PlusPlus,
+        sample_config: SampleConfig,
+        prob: SPProblem,
 
-    pub fn construct(mut self,start_index:usize,end_index:usize) -> Self {
+    ) -> Self {
+        Self {
+            instance,
+            prob,
+            rng,
+            sample_config,
+        }
+    }
+
+pub fn construct(mut self,start_index:usize,end_index:usize) -> Self {
         let start = Instant::now();
         let n_items = self.instance.items.len();
         let sorted_item_indices = (0..n_items)
@@ -67,7 +81,7 @@ impl LBFBuilder {
         self
     }
 
-    fn place_item(&mut self, item_id: usize) {
+    pub fn place_item(&mut self, item_id: usize) {
         match self.find_placement(item_id) {
             Some(p_opt) => {
                 self.prob.place_item(p_opt);

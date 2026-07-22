@@ -62,7 +62,7 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
                 Ok(idx) | Err(idx) => infeas_sol_pool.insert(idx, (local_best.0.clone(), total_loss)),
             }
 
-            if infeas_sol_pool.len() >= config.max_conseq_failed_attempts.unwrap_or(usize::MAX) {
+            if infeas_sol_pool.len() >= 4{//config.max_conseq_failed_attempts.unwrap_or(usize::MAX) {
                 //info!("[EXPL] max consecutive failed attempts ({}), terminating", infeas_sol_pool.len());
                 break;
             }
