@@ -1,3 +1,5 @@
+This fork makes sparrow into a bin packer. Meant to be used with sparrow-instance-maker. 
+
 # sparrow 🪶 
 [![DOI](https://zenodo.org/badge/DOI/10.48550/arXiv.2509.13329.svg)](https://doi.org/10.48550/arXiv.2509.13329)
 [![CI](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main)](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml) 
