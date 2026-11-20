@@ -32,7 +32,7 @@ ordered-float = "5.0"
 rayon = "1.10"
 numfmt = "1.1"
 num_cpus = "1.17"
-jiff = "0.2"
+jiff = "1.0"
 test-case = "3.3"
 clap = { version = "4.5", features = ["derive"] }
 anyhow = "1.0"
